@@ -5,7 +5,7 @@ Fetches real cell tower locations for positioning calculations
 import httpx
 import logging
 from typing import Optional, Dict, Any
-from app.database import db
+from app.database import mongodb
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class OpenCellIDService:
     
     def __init__(self):
         self.api_key = OPENCELLID_API_KEY
-        self.cache_collection = db.towers
+        self.cache_collection = mongodb.db.towers if mongodb.db else None
     
     async def get_tower_location(
         self, 
@@ -125,6 +125,9 @@ class OpenCellIDService:
     ) -> Optional[Dict[str, Any]]:
         """Get tower from local MongoDB cache"""
         try:
+            if not self.cache_collection:
+                return None
+                
             tower = await self.cache_collection.find_one({
                 "mcc": mcc,
                 "mnc": mnc,
@@ -157,6 +160,10 @@ class OpenCellIDService:
     ):
         """Cache tower data in MongoDB"""
         try:
+            if not self.cache_collection:
+                logger.warning("MongoDB not connected, skipping tower cache")
+                return
+                
             await self.cache_collection.update_one(
                 {
                     "mcc": mcc,
