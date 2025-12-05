@@ -6,7 +6,6 @@ from bson import ObjectId
 from app.models.schemas import PositionUpdate, PositionResponse
 from app.database import mongodb, redis_client
 from app.services.positioning import positioning_engine
-from app.services.tower_database import tower_db
 from app.services.websocket_manager import manager
 import logging
 import json
@@ -24,40 +23,28 @@ async def create_position_update(update: PositionUpdate):
     try:
         logger.info(f"Received position update from vehicle: {update.vehicle_id}")
         
-        # Get tower locations for all cells
-        tower_locations = await tower_db.get_tower_locations_bulk(update.raw_data.cells)
-        
-        # Estimate position using positioning engine
+        # Estimate position using positioning engine (now with OpenCellID integration)
         estimated_position = None
         accuracy = 0
         method = "none"
         
-        if tower_locations:
-            position, accuracy, method = await positioning_engine.estimate_position(
-                update.raw_data.cells,
-                tower_locations
-            )
-            
-            if position:
-                estimated_position = {
-                    "type": "Point",
-                    "coordinates": [position.lon, position.lat]  # GeoJSON: [lon, lat]
-                }
-            elif update.position:
-                # Use provided position for demo mode
-                estimated_position = {
-                    "type": "Point",
-                    "coordinates": [update.position.lon, update.position.lat]
-                }
-                accuracy = 50  # Demo mode has perfect accuracy
-                method = "demo_mode"
+        # Try to estimate position from cellular data
+        position, accuracy, method = await positioning_engine.estimate_position(
+            update.raw_data.cells
+        )
+        
+        if position:
+            estimated_position = {
+                "type": "Point",
+                "coordinates": [position.lon, position.lat]  # GeoJSON: [lon, lat]
+            }
         elif update.position:
             # Fallback to provided position (demo mode)
             estimated_position = {
                 "type": "Point",
                 "coordinates": [update.position.lon, update.position.lat]
             }
-            accuracy = 50
+            accuracy = 50  # Demo mode has perfect accuracy
             method = "demo_mode"
         
         # Save to MongoDB

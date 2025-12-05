@@ -1,0 +1,20 @@
+# Copy these environment variables to Render
+# Go to: Environment tab → Add Environment Variable
+
+MONGODB_URL=mongodb+srv://twitter7817_db_user:0AhdcaXftl1A1Ywu@cluster0.vstmjjk.mongodb.net/vehicle_tracking?appName=Cluster0
+
+MONGODB_DB_NAME=vehicle_tracking
+
+REDIS_HOST=redis-16925.c8.us-east-1-4.ec2.cloud.redislabs.com
+
+REDIS_PORT=16925
+
+REDIS_PASSWORD=aBUfustcyLCHpW1tLObInekWJQDsa8Q5
+
+REDIS_DB=0
+
+DEBUG=false
+
+CORS_ORIGINS=["*"]
+
+HOST=0.0.0.0

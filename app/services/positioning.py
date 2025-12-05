@@ -2,6 +2,7 @@ import math
 import numpy as np
 from typing import List, Tuple, Optional, Dict
 from app.models.schemas import CellTowerData, Position
+from app.services.opencellid import opencellid_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,15 +24,20 @@ class PositioningEngine:
     async def estimate_position(
         self,
         cells: List[CellTowerData],
-        tower_locations: Dict[int, Tuple[float, float]]
+        tower_locations: Dict[int, Tuple[float, float]] = None
     ) -> Tuple[Position, float, str]:
         """
         Main position estimation method
+        Now automatically fetches tower locations from OpenCellID
         Returns: (position, accuracy_meters, method_used)
         """
         
-        if not cells or not tower_locations:
+        if not cells:
             return None, 0, "no_data"
+        
+        # If tower_locations not provided, fetch from OpenCellID
+        if tower_locations is None:
+            tower_locations = await self.fetch_tower_locations(cells)
         
         # Filter cells that have known tower locations
         valid_cells = [
@@ -69,6 +75,42 @@ class PositioningEngine:
         position = Position(lat=tower_loc[0], lon=tower_loc[1])
         accuracy = 800  # Rough estimate for cell range
         return position, accuracy, "cell_id_fallback"
+    
+    async def fetch_tower_locations(self, cells: List[CellTowerData]) -> Dict[int, Tuple[float, float]]:
+        """
+        Fetch tower locations from OpenCellID for all cells
+        Falls back to mock data if OpenCellID fails
+        """
+        tower_locations = {}
+        
+        for cell in cells:
+            try:
+                # Get MCC and MNC from cell data
+                mcc = cell.mcc if hasattr(cell, 'mcc') else 404  # Default to India
+                mnc = cell.mnc if hasattr(cell, 'mnc') else 45   # Default to Airtel
+                lac = cell.lac
+                cid = cell.cid
+                
+                # Query OpenCellID
+                tower_data = await opencellid_service.get_tower_location(mcc, mnc, lac, cid)
+                
+                if tower_data:
+                    tower_locations[cid] = (tower_data['lat'], tower_data['lon'])
+                    logger.info(f"Tower {cid} location: ({tower_data['lat']}, {tower_data['lon']})")
+                else:
+                    # Fallback to mock tower if available
+                    mock_tower = await opencellid_service.get_mock_tower_fallback(cid)
+                    if mock_tower:
+                        tower_locations[cid] = (mock_tower['lat'], mock_tower['lon'])
+                        logger.info(f"Using mock location for tower {cid}")
+                    else:
+                        logger.warning(f"No location found for tower {cid}")
+                        
+            except Exception as e:
+                logger.error(f"Error fetching tower {cell.cid}: {e}")
+                continue
+        
+        return tower_locations
     
     async def triangulation_with_ta(
         self,
