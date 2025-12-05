@@ -1,0 +1,37 @@
+# Render Blueprint for GPS-Free Vehicle Tracking Backend
+# This file configures automatic deployment to Render.com
+
+services:
+  - type: web
+    name: vehicle-tracking-backend
+    runtime: python
+    env: python
+    region: oregon # Change to your preferred region: oregon, frankfurt, singapore, etc.
+    plan: free # Free tier - upgrade to starter ($7/mo) for better performance
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: MONGODB_URL
+        sync: false # Set manually in Render dashboard
+      - key: MONGODB_DB_NAME
+        value: vehicle_tracking
+      - key: REDIS_HOST
+        sync: false # Set manually in Render dashboard
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_DB
+        value: 0
+      - key: DEBUG
+        value: false
+      - key: CORS_ORIGINS
+        value: '["*"]'
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    autoDeploy: true

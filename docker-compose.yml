@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: vehicle_tracking_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=vehicle_tracking
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: vehicle_tracking_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  backend:
+    build: .
+    container_name: vehicle_tracking_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DB_NAME=vehicle_tracking
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=True
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:
