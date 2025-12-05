@@ -13,6 +13,11 @@ async def get_all_routes():
     """Get all routes"""
     
     try:
+        # Check if MongoDB is connected
+        if not mongodb.db:
+            logger.warning("MongoDB not connected, returning empty routes")
+            return {"count": 0, "routes": []}
+        
         cursor = mongodb.db.routes.find()
         routes = await cursor.to_list(length=100)
         
@@ -33,6 +38,13 @@ async def get_route(route_id: str):
     """Get specific route details"""
     
     try:
+        # Check if MongoDB is connected
+        if not mongodb.db:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database not available"
+            )
+        
         route = await mongodb.db.routes.find_one({"route_id": route_id})
         
         if not route:
@@ -58,6 +70,13 @@ async def create_route(route: Route):
     """Create a new route"""
     
     try:
+        # Check if MongoDB is connected
+        if not mongodb.db:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database not available"
+            )
+        
         # Check if route already exists
         existing = await mongodb.db.routes.find_one({"route_id": route.route_id})
         if existing:

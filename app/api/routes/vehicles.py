@@ -13,6 +13,11 @@ async def get_all_vehicles():
     """Get all vehicles"""
     
     try:
+        # Check if MongoDB is connected
+        if not mongodb.db:
+            logger.warning("MongoDB not connected, returning empty vehicles")
+            return {"count": 0, "vehicles": []}
+        
         cursor = mongodb.db.vehicles.find()
         vehicles = await cursor.to_list(length=1000)
         
