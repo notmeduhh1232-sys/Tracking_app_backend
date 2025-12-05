@@ -12,18 +12,24 @@ class MongoDB:
     async def connect(self):
         """Connect to MongoDB"""
         try:
-            self.client = AsyncIOMotorClient(settings.MONGODB_URL)
+            logger.info(f"Attempting to connect to MongoDB at: {settings.MONGODB_URL[:20]}...")
+            self.client = AsyncIOMotorClient(
+                settings.MONGODB_URL,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000
+            )
             self.db = self.client[settings.MONGODB_DB_NAME]
             
             # Test connection
             await self.client.admin.command('ping')
-            logger.info("Connected to MongoDB successfully")
+            logger.info("✅ Connected to MongoDB successfully")
             
             # Create indexes
             await self.create_indexes()
         except Exception as e:
-            logger.error(f"Failed to connect to MongoDB: {e}")
-            raise
+            logger.error(f"❌ Failed to connect to MongoDB: {e}")
+            logger.warning("⚠️  Backend will start without MongoDB connection")
+            # Don't raise - allow server to start
     
     async def disconnect(self):
         """Disconnect from MongoDB"""
@@ -68,11 +74,13 @@ class RedisClient:
     async def connect(self):
         """Connect to Redis"""
         try:
+            logger.info(f"Attempting to connect to Redis at: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
             redis_kwargs = {
                 "host": settings.REDIS_HOST,
                 "port": settings.REDIS_PORT,
                 "db": settings.REDIS_DB,
-                "decode_responses": True
+                "decode_responses": True,
+                "socket_connect_timeout": 5
             }
             
             # Add password if provided
@@ -83,9 +91,10 @@ class RedisClient:
             
             # Test connection
             await self.client.ping()
-            logger.info(f"Connected to Redis successfully at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+            logger.info(f"✅ Connected to Redis successfully at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+            logger.error(f"❌ Failed to connect to Redis: {e}")
+            logger.warning("⚠️  Backend will start without Redis connection")
             # Don't raise - Redis is optional
     
     async def disconnect(self):

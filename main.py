@@ -18,10 +18,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     # Startup
-    logger.info("Starting up backend...")
+    logger.info("=" * 50)
+    logger.info("🚀 Starting up backend...")
+    logger.info(f"Environment: {'DEBUG' if settings.DEBUG else 'PRODUCTION'}")
+    logger.info(f"Host: {settings.HOST}:{settings.PORT}")
+    logger.info(f"MongoDB DB: {settings.MONGODB_DB_NAME}")
+    logger.info("=" * 50)
+    
     await mongodb.connect()
     await redis_client.connect()
-    logger.info("Backend started successfully!")
+    logger.info("✅ Backend startup complete!")
     
     yield
     
