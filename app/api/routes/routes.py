@@ -14,7 +14,7 @@ async def get_all_routes():
     
     try:
         # Check if MongoDB is connected
-        if not mongodb.db:
+        if mongodb.db is None:
             logger.warning("MongoDB not connected, returning empty routes")
             return {"count": 0, "routes": []}
         
@@ -39,7 +39,7 @@ async def get_route(route_id: str):
     
     try:
         # Check if MongoDB is connected
-        if not mongodb.db:
+        if mongodb.db is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database not available"
@@ -71,7 +71,7 @@ async def create_route(route: Route):
     
     try:
         # Check if MongoDB is connected
-        if not mongodb.db:
+        if mongodb.db is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database not available"

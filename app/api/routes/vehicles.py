@@ -14,7 +14,7 @@ async def get_all_vehicles():
     
     try:
         # Check if MongoDB is connected
-        if not mongodb.db:
+        if mongodb.db is None:
             logger.warning("MongoDB not connected, returning empty vehicles")
             return {"count": 0, "vehicles": []}
         
@@ -40,6 +40,12 @@ async def get_vehicle(device_id: str):
     """Get specific vehicle"""
     
     try:
+        if mongodb.db is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database not available"
+            )
+        
         vehicle = await mongodb.db.vehicles.find_one({"device_id": device_id})
         
         if not vehicle:
@@ -68,6 +74,12 @@ async def register_vehicle(vehicle: Vehicle):
     """Register a new vehicle"""
     
     try:
+        if mongodb.db is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database not available"
+            )
+        
         # Check if already exists
         existing = await mongodb.db.vehicles.find_one({"device_id": vehicle.device_id})
         if existing:
