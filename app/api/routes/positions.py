@@ -6,6 +6,7 @@ from bson import ObjectId
 from app.models.schemas import PositionUpdate, PositionResponse
 from app.database import mongodb, redis_client
 from app.services.positioning import positioning_engine
+from app.services.route_tracking import route_tracking_service
 from app.services.websocket_manager import manager
 import logging
 import json
@@ -86,19 +87,39 @@ async def create_position_update(update: PositionUpdate):
             except Exception as e:
                 logger.warning(f"Redis cache error: {e}")
         
-        # Broadcast update to WebSocket clients
-        broadcast_data = {
-            "type": "position_update",
-            "vehicle_id": update.vehicle_id,
-            "route_id": update.route_id,
-            "position": estimated_position,
-            "accuracy": accuracy,
-            "method": method,
-            "timestamp": update.timestamp
-        }
-        await manager.broadcast(broadcast_data)
-        
-        logger.info(f"Position saved: {method}, accuracy: {accuracy}m")
+        # Process with Route Tracking Service for passenger-friendly data
+        if estimated_position:
+            position_coords = {
+                "lat": estimated_position["coordinates"][1],  # GeoJSON is [lon, lat]
+                "lon": estimated_position["coordinates"][0]
+            }
+            
+            passenger_data = await route_tracking_service.process_position_update(
+                vehicle_id=update.vehicle_id,
+                route_id=update.route_id,
+                position=position_coords,
+                accuracy=accuracy,
+                method=method,
+                timestamp=update.timestamp,
+                raw_data=update.raw_data.dict() if update.raw_data else None
+            )
+            
+            # Broadcast passenger-friendly data to WebSocket clients
+            await manager.broadcast(passenger_data)
+            
+            logger.info(f"Position saved: {method}, accuracy: {accuracy}m, stop: {passenger_data.get('current_stop', 'unknown')}")
+        else:
+            # Fallback broadcast if no position
+            broadcast_data = {
+                "type": "position_update",
+                "vehicle_id": update.vehicle_id,
+                "route_id": update.route_id,
+                "error": "No position calculated",
+                "timestamp": update.timestamp
+            }
+            await manager.broadcast(broadcast_data)
+            
+            logger.info(f"Position saved: {method}, no location calculated")
         
         return {
             "id": str(result.inserted_id),
