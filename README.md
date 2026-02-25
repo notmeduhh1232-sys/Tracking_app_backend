@@ -271,14 +271,3 @@ netstat -ano | findstr :8000
 3. Connect to GitHub
 4. Add MongoDB/Redis URLs
 
-## 📞 Support
-
-**Common issues:**
-- Can't connect to MongoDB → Check `MONGODB_URL` in `.env`
-- Redis errors → Redis is optional, app works without it
-- Position estimation fails → Check tower database has data
-- WebSocket not working → Check CORS settings
-
----
-
-**Backend is production-ready and scalable! 🎊**
